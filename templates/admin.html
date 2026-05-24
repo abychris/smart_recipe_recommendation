@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard — SmartRecipe</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script>
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+</head>
+<body>
+
+    <!-- Ambient backgrounds -->
+    <div class="bg-glow-container">
+        <div class="ambient-orb orb-1"></div>
+        <div class="ambient-orb orb-2"></div>
+        <div class="ambient-orb orb-3"></div>
+    </div>
+
+    <!-- NAVBAR -->
+    <nav class="nav-bar">
+        <div class="nav-container">
+            <a href="/" class="nav-brand">
+                <span class="nav-brand-icon">🍳</span>
+                <span class="nav-brand-text">SmartRecipe</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="/" class="nav-link">← Back to Site</a></li>
+                <li><span class="nav-divider"></span></li>
+                <li><span class="nav-user">🛡️ {{ current_user.username }}</span></li>
+                <li><a href="{{ url_for('logout') }}" class="nav-btn nav-btn-ghost">Log Out</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- CONTENT -->
+    <div class="page-container">
+        <div class="page-header reveal">
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+                <span style="font-size:2.8rem;">🛡️</span>
+                <h1 class="page-title" style="margin-bottom:0;">Admin Dashboard</h1>
+            </div>
+            <p class="page-subtitle">Manage recipes, monitor users, and maintain the platform.</p>
+        </div>
+
+        <div class="admin-grid reveal" style="margin-bottom:40px;">
+            <div class="stat-card" style="border-top: 4px solid var(--accent-primary);">
+                <div class="stat-info">
+                    <p class="num">{{ recipes|length }}</p>
+                    <p class="label">Total Recipes</p>
+                </div>
+                <span class="stat-icon-large">📖</span>
+            </div>
+            <div class="stat-card" style="border-top: 4px solid var(--accent-sky);">
+                <div class="stat-info">
+                    <p class="num">{{ total_users }}</p>
+                    <p class="label">Registered Users</p>
+                </div>
+                <span class="stat-icon-large">👥</span>
+            </div>
+            <div class="stat-card" style="border-top: 4px solid var(--accent-coral);">
+                <div class="stat-info">
+                    <p class="num">{{ recipes|sum(attribute='saves') }}</p>
+                    <p class="label">Total Saves</p>
+                </div>
+                <span class="stat-icon-large">❤️</span>
+            </div>
+            <div class="stat-card" style="border-top: 4px solid var(--accent-amber);">
+                <div class="stat-info">
+                    {% set top = recipes|sort(attribute='saves', reverse=True)|first %}
+                    <p class="num" style="font-size:1.15rem; font-weight:800; overflow:hidden; text-overflow:ellipsis; max-width:180px; white-space:nowrap; margin-bottom:6px;">{{ top.name if top else 'N/A' }}</p>
+                    <p class="label" style="margin-top:0;">🏆 Top Recipe ({{ top.saves if top else 0 }} saves)</p>
+                </div>
+                <span class="stat-icon-large">🏆</span>
+            </div>
+        </div>
+
+        <!-- TABS -->
+        <div class="admin-tabs reveal">
+            <button onclick="switchTab('recipes')" id="tab-recipes" class="admin-tab-btn active">
+                📖 Recipes ({{ recipes|length }})
+            </button>
+            <button onclick="switchTab('users')" id="tab-users" class="admin-tab-btn">
+                👥 Users ({{ total_users }})
+            </button>
+        </div>
+
+        <!-- ==================== RECIPES TAB ==================== -->
+        <div id="panel-recipes" class="glass-box reveal">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:16px;">
+                <h2 style="font-family:'Outfit', sans-serif; font-size:1.4rem; font-weight:800;">All Recipes</h2>
+                <input type="text" id="recipe-filter" placeholder="Search recipes..." class="search-input" style="padding:10px 18px; font-size:0.9rem; max-width:300px; width:100%;">
+            </div>
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Recipe Name</th>
+                            <th style="text-align:center;">Ingredients</th>
+                            <th style="text-align:center;">Prep Time</th>
+                            <th style="text-align:center;">Servings</th>
+                            <th style="text-align:center;">Saves</th>
+                            <th style="text-align:right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for recipe in recipes %}
+                        <tr class="recipe-row">
+                            <td style="font-family:'Inter', monospace; color:var(--text-muted); font-size:0.78rem;">#{{ recipe.id }}</td>
+                            <td class="recipe-name">
+                                <p style="font-weight:700; color:var(--text-primary);">{{ recipe.name }}</p>
+                                {% if recipe.description %}
+                                <p style="font-size:0.76rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:280px;">{{ recipe.description }}</p>
+                                {% endif %}
+                            </td>
+                            <td style="text-align:center;">
+                                <span class="nav-user" style="font-size:0.75rem; padding:3px 8px;">{{ recipe.ingredient_count }} items</span>
+                            </td>
+                            <td style="text-align:center; font-size:0.85rem; color:var(--text-secondary);">{{ recipe.prep_time_minutes or '—' }} min</td>
+                            <td style="text-align:center; font-size:0.85rem; color:var(--text-secondary);">{{ recipe.servings or '—' }}</td>
+                            <td style="text-align:center;">
+                                {% if recipe.saves > 0 %}
+                                    <span style="color:var(--accent-rose); font-weight:800; font-size:0.85rem;">❤️ {{ recipe.saves }}</span>
+                                {% else %}
+                                    <span style="color:var(--text-muted); font-size:0.85rem;">0</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align:right;">
+                                <div style="display:flex; align-items:center; justify-content:flex-end; gap:8px;">
+                                    <button onclick="viewRecipeDetail({{ recipe.id }})" class="toggle-btn active" style="padding:6px 14px; font-size:0.78rem;">
+                                        View
+                                    </button>
+                                    <form action="{{ url_for('delete_recipe', recipe_id=recipe.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete &quot;{{ recipe.name }}&quot;? This cannot be undone.')">
+                                        <button type="submit" class="toggle-btn" style="padding:6px 14px; font-size:0.78rem; color:var(--accent-rose); border-color:rgba(244,63,94,0.3);">
+                                            Delete
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ==================== USERS TAB ==================== -->
+        <div id="panel-users" class="glass-box hidden reveal">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:16px;">
+                <h2 style="font-family:'Outfit', sans-serif; font-size:1.4rem; font-weight:800;">Registered Users</h2>
+                <input type="text" id="user-filter" placeholder="Search users..." class="search-input" style="padding:10px 18px; font-size:0.9rem; max-width:300px; width:100%;">
+            </div>
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th style="text-align:center;">Role</th>
+                            <th style="text-align:center;">Saved Recipes</th>
+                            <th style="text-align:center;">Pantry Items</th>
+                            <th style="text-align:right;">Joined</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr class="user-row">
+                            <td style="font-family:monospace; color:var(--text-muted); font-size:0.8rem;">#{{ user.id }}</td>
+                            <td class="user-name">
+                                <span style="font-weight:700; color:var(--text-primary);">{{ user.username }}</span>
+                            </td>
+                            <td style="color:var(--text-secondary);">{{ user.email }}</td>
+                            <td style="text-align:center;">
+                                {% if user.is_admin %}
+                                    <span class="nav-user" style="font-size:0.75rem; padding:3px 8px; color:var(--accent-purple); border-color:var(--accent-purple);">🛡️ Admin</span>
+                                {% else %}
+                                    <span class="nav-user" style="font-size:0.75rem; padding:3px 8px; color:var(--text-muted); border-color:var(--border-light);">User</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align:center;">
+                                {% if user.saved_count > 0 %}
+                                    <span style="color:var(--accent-rose); font-weight:800; font-size:0.85rem;">❤️ {{ user.saved_count }}</span>
+                                {% else %}
+                                    <span style="color:var(--text-muted); font-size:0.85rem;">0</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align:center;">
+                                {% if user.pantry_count > 0 %}
+                                    <span style="color:var(--accent-emerald); font-weight:800; font-size:0.85rem;">🧂 {{ user.pantry_count }}</span>
+                                {% else %}
+                                    <span style="color:var(--text-muted); font-size:0.85rem;">0</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align:right; font-size:0.82rem; color:var(--text-muted);">{{ user.created_at.strftime('%d %b %Y') if user.created_at else '—' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== RECIPE DETAIL MODAL ==================== -->
+    <div id="recipe-modal" class="hidden">
+        <div id="modal-overlay" class="modal-overlay" onclick="closeRecipeModal()"></div>
+        <div class="modal-wrapper">
+            <div id="modal-body" class="modal-card">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="footer-bottom">
+            &copy; 2026 SmartRecipe — Admin Panel. Built with Flask &amp; MySQL.
+        </div>
+    </footer>
+
+    <script>
+        // ========== Tab Switching ==========
+        function switchTab(tab) {
+            document.getElementById('panel-recipes').classList.toggle('hidden', tab !== 'recipes');
+            document.getElementById('panel-users').classList.toggle('hidden', tab !== 'users');
+            document.querySelectorAll('.admin-tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.id === `tab-${tab}`);
+            });
+        }
+
+        // ========== Live Filters ==========
+        document.getElementById('recipe-filter').addEventListener('input', function() {
+            const q = this.value.toLowerCase();
+            document.querySelectorAll('.recipe-row').forEach(row => {
+                row.style.display = row.querySelector('.recipe-name').textContent.toLowerCase().includes(q) ? '' : 'none';
+            });
+        });
+        document.getElementById('user-filter').addEventListener('input', function() {
+            const q = this.value.toLowerCase();
+            document.querySelectorAll('.user-row').forEach(row => {
+                const text = row.querySelector('.user-name').textContent.toLowerCase() + row.querySelector('td:nth-child(3)').textContent.toLowerCase();
+                row.style.display = text.includes(q) ? '' : 'none';
+            });
+        });
+
+        // ========== Recipe Detail Modal ==========
+        async function viewRecipeDetail(id) {
+            const modal = document.getElementById('recipe-modal');
+            const body = document.getElementById('modal-body');
+            body.innerHTML = '<div style="display:flex;justify-content:center;padding:4rem 0;"><div class="spinner-ring"><div class="track"></div><div class="fill"></div></div></div>';
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+
+            try {
+                const res = await fetch(`/admin/recipe/${id}`);
+                const data = await res.json();
+
+                if (data.status !== 'success') {
+                    body.innerHTML = '<p style="color:#fca5a5; text-align:center; padding:3rem;">Recipe not found.</p>';
+                    return;
+                }
+
+                const r = data.recipe;
+                const fallback = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80';
+                const imgUrl = r.image_url || fallback;
+
+                const ingsHtml = r.ingredients.map(i => `
+                    <tr>
+                        <td style="padding:10px 0; color:var(--text-secondary); font-size:0.92rem; font-weight:600;">${i.name}</td>
+                        <td style="padding:10px 0; color:var(--accent-primary); font-size:0.92rem; font-weight:700; text-align:right;">${i.quantity || '—'}</td>
+                    </tr>
+                `).join('');
+
+                function parseInstructions(instructionsText) {
+                    if (!instructionsText) return [];
+                    let text = instructionsText.replace(/\r\n/g, '\n').trim();
+                    let steps = [];
+                    const hasNumberedSteps = /(?:^|\n)\d+\.\s+/.test(text);
+                    const hasStepKeywords = /(?:^|\n)step\s*\d+/i.test(text);
+                    if (hasNumberedSteps) {
+                        let parts = text.split(/(?=(?:^|\n)\d+\.\s+)/);
+                        steps = parts.map(p => p.trim()).filter(p => p.length > 3);
+                        steps = steps.map(s => s.replace(/^\d+\.\s*/, '').trim());
+                    } else if (hasStepKeywords) {
+                        let parts = text.split(/(?=(?:^|\n)step\s*\d+)/i);
+                        steps = parts.map(p => p.trim()).filter(p => p.length > 3);
+                        steps = steps.map(s => s.replace(/^step\s*\d+[\s\-:]*/i, '').trim());
+                    } else {
+                        let paragraphs = text.split(/\n\s*\n+/);
+                        if (paragraphs.length > 1) {
+                            steps = paragraphs.map(p => p.trim()).filter(p => p.length > 5);
+                        } else {
+                            let lines = text.split(/\n+/);
+                            if (lines.length > 2) {
+                                steps = lines.map(l => l.trim()).filter(l => l.length > 5);
+                            } else {
+                                steps = text.split(/\.\s+/)
+                                    .map(s => s.trim())
+                                    .filter(s => s.length > 2)
+                                    .map(s => s.endsWith('.') ? s : s + '.');
+                            }
+                        }
+                    }
+                    return steps;
+                }
+
+                // Parse instructions
+                const steps = parseInstructions(r.instructions);
+                const stepsHtml = steps.map((s, i) => `
+                    <li style="display:flex; gap:14px; margin-bottom:12px;">
+                        <span class="step-number">${i+1}</span>
+                        <span class="step-text" style="font-size:0.92rem; color:var(--text-secondary); line-height:1.6;">${s}</span>
+                    </li>
+                `).join('');
+
+                body.innerHTML = `
+                    <div class="modal-image-header" style="height:220px;">
+                        <img src="${imgUrl}" alt="${r.name}">
+                        <div class="overlay"></div>
+                        <button onclick="closeRecipeModal()" class="modal-action-btn" style="position:absolute; top:1rem; right:1rem;">✕</button>
+                        <div class="modal-title-overlay">
+                            <p style="font-size:0.75rem; color:rgba(255,255,255,0.5); font-family:monospace; margin-bottom:0.25rem;">ID #${r.id} · ${r.save_count} saves</p>
+                            <h2 style="font-size:1.75rem; font-family:'Outfit', sans-serif; font-weight:900;">${r.name}</h2>
+                        </div>
+                    </div>
+
+                    <div class="modal-body" style="padding:28px;">
+                        ${r.description ? `<p class="modal-desc" style="font-size:0.95rem; margin-bottom:1.5rem;">${r.description}</p>` : ''}
+
+                        <div class="modal-meta" style="margin-bottom:1.5rem;">
+                            <span class="modal-meta-tag teal">⏱️ ${r.prep_time_minutes || '—'} min</span>
+                            <span class="modal-meta-tag emerald">🍽️ ${r.servings || '—'} servings</span>
+                            <span class="modal-meta-tag violet">🥕 ${r.ingredients.length} ingredients</span>
+                        </div>
+
+                        <h3 class="modal-section-title">Ingredients</h3>
+                        <table class="modal-ingredients-table" style="margin-bottom:1.5rem;"><tbody>${ingsHtml}</tbody></table>
+
+                        <h3 class="modal-section-title">Instructions</h3>
+                        <ol class="modal-steps">${stepsHtml}</ol>
+                    </div>
+                `;
+            } catch(err) {
+                body.innerHTML = `<p style="color:#fca5a5; text-align:center; padding:3rem;">Error loading recipe.</p>`;
+            }
+        }
+
+        function closeRecipeModal() {
+            document.getElementById('recipe-modal').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeRecipeModal(); });
+    </script>
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+</body>
+</html>

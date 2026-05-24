@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saved Recipes — SmartRecipe</title>
+    <meta name="description" content="View and manage your saved recipe collection.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script>
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+</head>
+<body>
+
+    <!-- Ambient backgrounds -->
+    <div class="bg-glow-container">
+        <div class="ambient-orb orb-1"></div>
+        <div class="ambient-orb orb-2"></div>
+        <div class="ambient-orb orb-3"></div>
+    </div>
+
+    <!-- NAVBAR -->
+    <nav class="nav-bar">
+        <div class="nav-container">
+            <a href="/" class="nav-brand">
+                <span class="nav-brand-icon">🍳</span>
+                <span class="nav-brand-text">SmartRecipe</span>
+            </a>
+            <button class="nav-mobile-toggle" aria-label="Toggle menu">☰</button>
+            <ul class="nav-links">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="{{ url_for('wellness_page') }}" class="nav-link">🌿 Wellness</a></li>
+                {% if current_user.is_authenticated %}
+                    <li class="nav-divider"></li>
+                    <li class="nav-dropdown-wrap">
+                        <button class="nav-dropdown-btn" aria-haspopup="true">👤 {{ current_user.username }} ▾</button>
+                        <ul class="nav-dropdown-menu">
+                            <li><a href="{{ url_for('pantry_page') }}" class="dropdown-item">🧂 My Pantry</a></li>
+                            <li><a href="{{ url_for('saved_recipes_page') }}" class="dropdown-item" style="color: var(--accent-primary); background: var(--bg-accent-soft);">❤️ Saved Cookbook</a></li>
+                            <li><a href="{{ url_for('submit_recipe') }}" class="dropdown-item">📝 Submit Recipe</a></li>
+                            {% if current_user.is_admin %}
+                                <li><a href="{{ url_for('admin_dashboard') }}" class="dropdown-item">🛡️ Admin Dashboard</a></li>
+                            {% endif %}
+                            <li class="dropdown-divider"></li>
+                            <li><a href="{{ url_for('logout') }}" class="dropdown-item logout-link">🚪 Log Out</a></li>
+                        </ul>
+                    </li>
+                {% else %}
+                    <li class="nav-divider"></li>
+                    <li><a href="{{ url_for('login') }}" class="nav-link" style="font-weight:700;">Log In</a></li>
+                    <li><a href="{{ url_for('register') }}" class="nav-btn nav-btn-primary">Sign Up</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+
+    <!-- CONTENT -->
+    <div class="page-container">
+        <div class="page-header reveal">
+            <h1 class="page-title">❤️ Your Cookbook</h1>
+            <p class="page-subtitle">All your saved recipes in one place. You can view them anytime.</p>
+        </div>
+
+        <!-- RESULTS SECTION -->
+        <section class="results-section" id="results-section" style="padding:0; margin-top:20px;">
+            
+            <!-- Loading spinner -->
+            <div id="loading-spinner" class="spinner">
+                <div class="spinner-ring">
+                    <div class="track"></div>
+                    <div class="fill"></div>
+                </div>
+                <p class="spinner-text">Loading your recipes...</p>
+            </div>
+
+            <!-- No results state -->
+            <div id="no-results" class="state-box hidden">
+                <span class="state-icon">📖</span>
+                <h3 class="state-title">Cookbook is Empty</h3>
+                <p class="state-desc">
+                    You haven't saved any recipes yet. Go back to search and click the ❤️ icon on recipes you like!
+                </p>
+                <a href="/" class="nav-btn nav-btn-primary" style="display:inline-block; margin-top:1.5rem;">
+                    Find Recipes
+                </a>
+            </div>
+
+            <!-- Recipe cards grid -->
+            <div id="results-grid" class="results-grid"></div>
+        </section>
+    </div>
+
+    <!-- RECIPE DETAIL MODAL -->
+    <div id="recipe-modal" class="hidden">
+        <div id="modal-overlay" class="modal-overlay"></div>
+        <div class="modal-wrapper">
+            <div id="modal-content" class="modal-card">
+                <!-- Dynamically filled by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="footer-bottom">
+            &copy; 2026 SmartRecipe — BCA Final Year Project. Built with Flask &amp; MySQL.
+        </div>
+    </footer>
+
+    <!-- Main JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const res = await fetch('/api/saved-recipes');
+                const data = await res.json();
+                
+                document.getElementById('loading-spinner').classList.add('hidden');
+                
+                if (data.status === 'success' && data.count > 0) {
+                    renderRecipeCards(data.recipes);
+                } else {
+                    document.getElementById('no-results').classList.remove('hidden');
+                }
+            } catch (e) {
+                console.error(e);
+                document.getElementById('loading-spinner').classList.add('hidden');
+                document.getElementById('no-results').classList.remove('hidden');
+            }
+        });
+    </script>
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+</body>
+</html>

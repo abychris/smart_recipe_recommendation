@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Pantry — SmartRecipe</title>
+    <meta name="description" content="Manage your pantry staples so SmartRecipe remembers them during searches.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script>
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+</head>
+<body>
+
+    <!-- Ambient backgrounds -->
+    <div class="bg-glow-container">
+        <div class="ambient-orb orb-1"></div>
+        <div class="ambient-orb orb-2"></div>
+        <div class="ambient-orb orb-3"></div>
+    </div>
+
+    <!-- NAVBAR -->
+    <nav class="nav-bar">
+        <div class="nav-container">
+            <a href="/" class="nav-brand">
+                <span class="nav-brand-icon">🍳</span>
+                <span class="nav-brand-text">SmartRecipe</span>
+            </a>
+            <button class="nav-mobile-toggle" aria-label="Toggle menu">☰</button>
+            <ul class="nav-links">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="{{ url_for('wellness_page') }}" class="nav-link">🌿 Wellness</a></li>
+                {% if current_user.is_authenticated %}
+                    <li class="nav-divider"></li>
+                    <li class="nav-dropdown-wrap">
+                        <button class="nav-dropdown-btn" aria-haspopup="true">👤 {{ current_user.username }} ▾</button>
+                        <ul class="nav-dropdown-menu">
+                            <li><a href="{{ url_for('pantry_page') }}" class="dropdown-item" style="color: var(--accent-primary); background: var(--bg-accent-soft);">🧂 My Pantry</a></li>
+                            <li><a href="{{ url_for('saved_recipes_page') }}" class="dropdown-item">❤️ Saved Cookbook</a></li>
+                            <li><a href="{{ url_for('submit_recipe') }}" class="dropdown-item">📝 Submit Recipe</a></li>
+                            {% if current_user.is_admin %}
+                                <li><a href="{{ url_for('admin_dashboard') }}" class="dropdown-item">🛡️ Admin Dashboard</a></li>
+                            {% endif %}
+                            <li class="dropdown-divider"></li>
+                            <li><a href="{{ url_for('logout') }}" class="dropdown-item logout-link">🚪 Log Out</a></li>
+                        </ul>
+                    </li>
+                {% else %}
+                    <li class="nav-divider"></li>
+                    <li><a href="{{ url_for('login') }}" class="nav-link" style="font-weight:700;">Log In</a></li>
+                    <li><a href="{{ url_for('register') }}" class="nav-btn nav-btn-primary">Sign Up</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+
+    <!-- CONTENT -->
+    <div class="page-container">
+        <div class="page-header reveal">
+            <h1 class="page-title">🧂 Smart Pantry</h1>
+            <p class="page-subtitle">Add your staple ingredients here (like salt, oil, garlic). We'll automatically remember them every time you search for recipes!</p>
+        </div>
+
+        <div class="glass-box reveal">
+            <div class="pantry-grid">
+                <div>
+                    <h2 style="font-family:'Outfit', sans-serif; font-size:1.4rem; font-weight:800; color:var(--text-primary); margin-bottom:1.5rem;">Add Staples</h2>
+                    <div style="display:flex; flex-direction:column; gap:16px;">
+                        <input type="text" id="pantry-input" class="search-input" placeholder="E.g., Olive Oil, Salt, Garlic..." autocomplete="off">
+                        <button onclick="addToPantry()" class="search-btn" style="padding:14px; border-radius:var(--radius-md); font-weight:800;">Add to Pantry</button>
+                    </div>
+                </div>
+                <div>
+                    <h2 style="font-family:'Outfit', sans-serif; font-size:1.4rem; font-weight:800; color:var(--text-primary); margin-bottom:1.5rem;">Currently in Pantry</h2>
+                    <div id="pantry-container" class="pantry-tags-list">
+                        <span style="font-size:0.9rem; color:var(--text-muted);">Loading pantry staples...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="footer-bottom">
+            &copy; 2026 SmartRecipe — BCA Final Year Project. Built with Flask &amp; MySQL.
+        </div>
+    </footer>
+
+    <script>
+        const pantryInput = document.getElementById('pantry-input');
+        const pantryContainer = document.getElementById('pantry-container');
+
+        async function loadPantry() {
+            try {
+                const res = await fetch('/api/pantry');
+                const data = await res.json();
+                if (data.status === 'success') {
+                    renderPantry(data.pantry);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function renderPantry(ingredients) {
+            pantryContainer.innerHTML = '';
+            if (ingredients.length === 0) {
+                pantryContainer.innerHTML = '<span style="font-size:0.9rem; color:var(--text-muted); font-weight:500;">Your pantry is empty. Add some staples on the left!</span>';
+                return;
+            }
+            ingredients.forEach(ing => {
+                const tag = document.createElement('span');
+                tag.className = 'pantry-pill';
+                tag.innerHTML = `
+                    ${ing.name}
+                    <button onclick="removeFromPantry('${ing.name}')" aria-label="Remove">
+                        <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                `;
+                pantryContainer.appendChild(tag);
+            });
+        }
+
+        async function addToPantry() {
+            const val = pantryInput.value.trim();
+            if (!val) return;
+            try {
+                const res = await fetch('/api/pantry', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ingredient: val })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    pantryInput.value = '';
+                    loadPantry();
+                } else {
+                    alert(data.message);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function removeFromPantry(name) {
+            try {
+                const res = await fetch(`/api/pantry/${encodeURIComponent(name)}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    loadPantry();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        pantryInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') addToPantry();
+        });
+
+        document.addEventListener('DOMContentLoaded', loadPantry);
+    </script>
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+</body>
+</html>

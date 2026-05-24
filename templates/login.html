@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — SmartRecipe</title>
+    <meta name="description" content="Log in to your SmartRecipe account to access saved recipes, pantry, and health tools.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script>
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+</head>
+<body>
+
+    <!-- Ambient backgrounds -->
+    <div class="bg-glow-container">
+        <div class="ambient-orb orb-1"></div>
+        <div class="ambient-orb orb-2"></div>
+        <div class="ambient-orb orb-3"></div>
+    </div>
+
+    <!-- Flash Alert System -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-container">
+          {% for category, message in messages %}
+            <div class="flash-msg {{ category }}">
+              <span>{{ '✓' if category == 'success' else '⚠️' }}</span>
+              <span>{{ message }}</span>
+            </div>
+          {% endfor %}
+        </div>
+        <script>
+          setTimeout(() => {
+            document.querySelectorAll('.flash-msg').forEach(el => {
+              el.style.animation = 'alertSlideIn 0.3s reverse forwards';
+              setTimeout(() => el.remove(), 300);
+            });
+          }, 4000);
+        </script>
+      {% endif %}
+    {% endwith %}
+
+    <!-- NAVBAR -->
+    <nav class="nav-bar">
+        <div class="nav-container">
+            <a href="/" class="nav-brand">
+                <span class="nav-brand-icon">🍳</span>
+                <span class="nav-brand-text">SmartRecipe</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="{{ url_for('wellness_page') }}" class="nav-link">🌿 Health & Wellness</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- CONTENT -->
+    <div class="auth-wrapper">
+        <div class="auth-card">
+            <div class="auth-header">
+                <span style="font-size:3rem; display:block; margin-bottom:15px; filter:drop-shadow(0 0 12px rgba(79, 70, 229, 0.25));">👋</span>
+                <h1>Welcome Back</h1>
+                <p>Log in to access your saved recipes, pantry, and health tools.</p>
+            </div>
+
+            <form action="{{ url_for('login') }}" method="POST">
+                <div class="auth-form-group">
+                    <label class="auth-label">Email Address</label>
+                    <div class="auth-input-wrapper">
+                        <span class="auth-input-icon">✉️</span>
+                        <input type="email" name="email" required class="auth-input" placeholder="you@example.com">
+                    </div>
+                </div>
+                <div class="auth-form-group">
+                    <label class="auth-label">Password</label>
+                    <div class="auth-input-wrapper">
+                        <span class="auth-input-icon">🔒</span>
+                        <input type="password" name="password" required class="auth-input" placeholder="••••••••">
+                    </div>
+                </div>
+                
+                <button type="submit" class="auth-submit-btn">Log In</button>
+            </form>
+            
+            <p class="auth-footer">
+                Don't have an account? <a href="{{ url_for('register') }}">Sign up now</a>
+            </p>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+</body>
+</html>

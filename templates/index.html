@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartRecipe — Find Recipes by Ingredients | Health & Wellness</title>
+    <meta name="description" content="Enter the ingredients you have and discover delicious recipes. Plus gym plans, diet plans, and health-focused dietary guidance.">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script>
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+</head>
+<body>
+    <!-- Ambient backgrounds -->
+    <div class="bg-glow-container">
+        <div class="ambient-orb orb-1"></div>
+        <div class="ambient-orb orb-2"></div>
+        <div class="ambient-orb orb-3"></div>
+    </div>
+
+    <!-- Flash Alert System -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-container">
+          {% for category, message in messages %}
+            <div class="flash-msg {{ category }}">
+              <span>{{ '✓' if category == 'success' else '⚠️' }}</span>
+              <span>{{ message }}</span>
+            </div>
+          {% endfor %}
+        </div>
+        <script>
+          setTimeout(() => {
+            document.querySelectorAll('.flash-msg').forEach(el => {
+              el.style.animation = 'alertSlideIn 0.3s reverse forwards';
+              setTimeout(() => el.remove(), 300);
+            });
+          }, 4000);
+        </script>
+      {% endif %}
+    {% endwith %}
+
+    <!-- ========================================= -->
+    <!-- NAVBAR                                    -->
+    <!-- ========================================= -->
+    <nav class="nav-bar">
+        <div class="nav-container">
+            <a href="/" class="nav-brand">
+                <span class="nav-brand-icon">🍳</span>
+                <span class="nav-brand-text">SmartRecipe</span>
+            </a>
+            <button class="nav-mobile-toggle" aria-label="Toggle menu">☰</button>
+            <ul class="nav-links">
+                <li><a href="/" class="nav-link active">Home</a></li>
+                <li><a href="{{ url_for('wellness_page') }}" class="nav-link">🌿 Wellness</a></li>
+                {% if current_user.is_authenticated %}
+                    <li class="nav-divider"></li>
+                    <li class="nav-dropdown-wrap">
+                        <button class="nav-dropdown-btn" aria-haspopup="true">👤 {{ current_user.username }} ▾</button>
+                        <ul class="nav-dropdown-menu">
+                            <li><a href="{{ url_for('pantry_page') }}" class="dropdown-item">🧂 My Pantry</a></li>
+                            <li><a href="{{ url_for('saved_recipes_page') }}" class="dropdown-item">❤️ Saved Cookbook</a></li>
+                            <li><a href="{{ url_for('submit_recipe') }}" class="dropdown-item">📝 Submit Recipe</a></li>
+                            {% if current_user.is_admin %}
+                                <li><a href="{{ url_for('admin_dashboard') }}" class="dropdown-item">🛡️ Admin Dashboard</a></li>
+                            {% endif %}
+                            <li class="dropdown-divider"></li>
+                            <li><a href="{{ url_for('logout') }}" class="dropdown-item logout-link">🚪 Log Out</a></li>
+                        </ul>
+                    </li>
+                {% else %}
+                    <li class="nav-divider"></li>
+                    <li><a href="{{ url_for('login') }}" class="nav-link" style="font-weight:700;">Log In</a></li>
+                    <li><a href="{{ url_for('register') }}" class="nav-btn nav-btn-primary">Sign Up</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+
+    <!-- ========================================= -->
+    <!-- HERO SECTION                              -->
+    <!-- ========================================= -->
+    <section class="hero">
+        <!-- Floating food emojis -->
+        <div class="hero-float float-slow" style="top:12%;left:10%;font-size:3.5rem;">🍅</div>
+        <div class="hero-float float-medium" style="top:20%;right:15%;font-size:3rem;">🧀</div>
+        <div class="hero-float float-fast" style="bottom:25%;left:20%;font-size:2.5rem;">🥚</div>
+        <div class="hero-float float-slow" style="bottom:18%;right:22%;font-size:3rem;">🍗</div>
+        <div class="hero-float float-medium" style="top:35%;left:50%;font-size:2rem;">🧈</div>
+
+        <div class="hero-content">
+            <h1>
+                What's in Your<br>
+                <span class="gradient-text">Kitchen</span>?
+            </h1>
+            <p class="hero-subtitle">
+                Enter the ingredients you have on hand, and we'll find the perfect recipes you can cook right now.
+            </p>
+
+            <!-- ===== SEARCH CARD ===== -->
+            <div class="search-card">
+                <!-- Selected ingredient tags -->
+                <div id="tags-container" class="search-tags">
+                    <span class="search-tags-placeholder">Your ingredients will appear here...</span>
+                </div>
+
+                <!-- Input + Search Button -->
+                <div class="search-row">
+                    <input
+                        id="search-input"
+                        type="text"
+                        class="search-input"
+                        placeholder="Type an ingredient & press Enter..."
+                        autocomplete="off"
+                    >
+                    <button id="search-btn" class="search-btn">🔍 Search</button>
+                </div>
+
+                <!-- Quick Suggestions -->
+                <div class="suggestions-wrap" id="suggestions-container">
+                    <span class="suggestions-label">Loading suggestions...</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================= -->
+    <!-- FEATURES SECTION                          -->
+    <!-- ========================================= -->
+    <section class="features-section">
+        <div class="features-grid">
+            <div class="feature-card accent-teal reveal">
+                <div class="feature-icon">🔍</div>
+                <h3 class="feature-title">Smart Recipe Search</h3>
+                <p class="feature-desc">Enter your available ingredients and our intelligent matching engine finds the best recipes ranked by how many ingredients you already have.</p>
+            </div>
+            <div class="feature-card accent-violet reveal">
+                <div class="feature-icon">🏋️</div>
+                <h3 class="feature-title">Gym & Diet Plans</h3>
+                <p class="feature-desc">Access curated workout programs and science-backed diet plans — from keto to intermittent fasting — with complete meal guides.</p>
+            </div>
+            <div class="feature-card accent-amber reveal">
+                <div class="feature-icon">🏥</div>
+                <h3 class="feature-title">Health Dietary Guide</h3>
+                <p class="feature-desc">Expert dietary recommendations for diabetes, PCOS, heart disease, thyroid and more — with foods to eat, avoid, and sample meal plans.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================= -->
+    <!-- RESULTS SECTION                           -->
+    <!-- ========================================= -->
+    <section class="results-section" id="results-section">
+        <!-- Results header -->
+        <div id="results-header" class="results-header hidden">
+            <h2>🎉 Found <span id="results-count" class="count">0</span> recipes for you</h2>
+            <p>Ranked by ingredient match — best matches first</p>
+        </div>
+
+        <!-- Loading spinner -->
+        <div id="loading-spinner" class="spinner hidden">
+            <div class="spinner-ring">
+                <div class="track"></div>
+                <div class="fill"></div>
+            </div>
+            <p class="spinner-text">Searching recipes...</p>
+        </div>
+
+        <!-- Empty state (initial) -->
+        <div id="empty-state" class="state-box">
+            <span class="state-icon">🥗</span>
+            <h3 class="state-title">Ready to Cook?</h3>
+            <p class="state-desc">Add ingredients using the search bar above and discover delicious recipes you can make right now!</p>
+        </div>
+
+        <!-- No results state -->
+        <div id="no-results" class="state-box hidden">
+            <span class="state-icon">😔</span>
+            <h3 class="state-title">No Recipes Found</h3>
+            <p class="state-desc">We couldn't find any recipes with those ingredients. Try adding different ones!</p>
+        </div>
+
+        <!-- Recipe cards grid -->
+        <div id="results-grid" class="results-grid"></div>
+    </section>
+
+    <!-- ========================================= -->
+    <!-- RECIPE DETAIL MODAL                       -->
+    <!-- ========================================= -->
+    <div id="recipe-modal" class="hidden">
+        <div id="modal-overlay" class="modal-overlay"></div>
+        <div class="modal-wrapper">
+            <div id="modal-content" class="modal-card">
+                <!-- Dynamically filled by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================= -->
+    <!-- FOOTER                                    -->
+    <!-- ========================================= -->
+    <footer class="site-footer">
+        <div class="footer-content">
+            <div>
+                <div class="footer-brand">
+                    <span style="font-size:1.25rem;">🍳</span>
+                    <span class="footer-brand-text">SmartRecipe</span>
+                </div>
+                <p class="footer-desc">Your intelligent companion for healthy cooking, smart meal planning, and wellness-focused nutrition.</p>
+            </div>
+            <div>
+                <h4 class="footer-heading">Quick Links</h4>
+                <ul class="footer-links">
+                    <li><a href="/">Recipe Search</a></li>
+                    <li><a href="{{ url_for('wellness_page') }}">Health & Wellness</a></li>
+                    <li><a href="{{ url_for('login') }}">Login / Sign Up</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="footer-heading">Health Tools</h4>
+                <ul class="footer-links">
+                    <li><a href="{{ url_for('wellness_page') }}">Gym Plans</a></li>
+                    <li><a href="{{ url_for('wellness_page') }}">Diet Plans</a></li>
+                    <li><a href="{{ url_for('wellness_page') }}">Health Conditions</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="footer-heading">About</h4>
+                <ul class="footer-links">
+                    <li><a href="#">BCA Final Year Project</a></li>
+                    <li><a href="#">Built with Flask & MySQL</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            &copy; 2026 SmartRecipe — BCA Final Year Project. Built with Flask &amp; MySQL.
+        </div>
+    </footer>
+
+    <!-- Main JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health & Wellness Center — SmartRecipe</title>
+    <meta name="description" content="Explore customized gym plans, diet structures, and dietary recommendations for health conditions. Calculate your BMI and calorie requirements.">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script>
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+</head>
+<body>
+
+    <!-- Ambient backgrounds -->
+    <div class="bg-glow-container">
+        <div class="ambient-orb orb-1"></div>
+        <div class="ambient-orb orb-2"></div>
+        <div class="ambient-orb orb-3"></div>
+    </div>
+
+    <!-- Flash Alert System -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-container">
+          {% for category, message in messages %}
+            <div class="flash-msg {{ category }}">
+              <span>{{ '✓' if category == 'success' else '⚠️' }}</span>
+              <span>{{ message }}</span>
+            </div>
+          {% endfor %}
+        </div>
+        <script>
+          setTimeout(() => {
+            document.querySelectorAll('.flash-msg').forEach(el => {
+              el.style.animation = 'alertSlideIn 0.3s reverse forwards';
+              setTimeout(() => el.remove(), 300);
+            });
+          }, 4000);
+        </script>
+      {% endif %}
+    {% endwith %}
+
+    <!-- ========================================= -->
+    <!-- NAVBAR                                    -->
+    <!-- ========================================= -->
+    <nav class="nav-bar">
+        <div class="nav-container">
+            <a href="/" class="nav-brand">
+                <span class="nav-brand-icon">🍳</span>
+                <span class="nav-brand-text">SmartRecipe</span>
+            </a>
+            <button class="nav-mobile-toggle" aria-label="Toggle menu">☰</button>
+            <ul class="nav-links">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="{{ url_for('wellness_page') }}" class="nav-link active">🌿 Wellness</a></li>
+                {% if current_user.is_authenticated %}
+                    <li class="nav-divider"></li>
+                    <li class="nav-dropdown-wrap">
+                        <button class="nav-dropdown-btn" aria-haspopup="true">👤 {{ current_user.username }} ▾</button>
+                        <ul class="nav-dropdown-menu">
+                            <li><a href="{{ url_for('pantry_page') }}" class="dropdown-item">🧂 My Pantry</a></li>
+                            <li><a href="{{ url_for('saved_recipes_page') }}" class="dropdown-item">❤️ Saved Cookbook</a></li>
+                            <li><a href="{{ url_for('submit_recipe') }}" class="dropdown-item">📝 Submit Recipe</a></li>
+                            {% if current_user.is_admin %}
+                                <li><a href="{{ url_for('admin_dashboard') }}" class="dropdown-item">🛡️ Admin Dashboard</a></li>
+                            {% endif %}
+                            <li class="dropdown-divider"></li>
+                            <li><a href="{{ url_for('logout') }}" class="dropdown-item logout-link">🚪 Log Out</a></li>
+                        </ul>
+                    </li>
+                {% else %}
+                    <li class="nav-divider"></li>
+                    <li><a href="{{ url_for('login') }}" class="nav-link" style="font-weight:700;">Log In</a></li>
+                    <li><a href="{{ url_for('register') }}" class="nav-btn nav-btn-primary">Sign Up</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+
+    <!-- ========================================= -->
+    <!-- WELLNESS HERO                             -->
+    <!-- ========================================= -->
+    <section class="wellness-hero">
+        <h1>Health & Wellness Center</h1>
+        <p class="hero-subtitle" style="color: rgba(255,255,255,0.7);">Personalized gym plans, expert diet recommendations, and health-focused nutrition guidance — all in one place.</p>
+    </section>
+
+    <!-- ========================================= -->
+    <!-- TAB NAVIGATION                            -->
+    <!-- ========================================= -->
+    <section class="wellness-tabs">
+        <div class="wellness-tab-bar">
+            <button class="wellness-tab-btn active" data-tab="gym">💪 Gym Plans</button>
+            <button class="wellness-tab-btn" data-tab="diet">🥗 Diet Plans</button>
+            <button class="wellness-tab-btn" data-tab="health">🏥 Health Conditions</button>
+            <button class="wellness-tab-btn" data-tab="bmi">📊 BMI Calculator</button>
+        </div>
+
+        <!-- ===== GYM PLANS TAB ===== -->
+        <div class="wellness-panel" id="panel-gym">
+            <div class="wellness-grid" id="gym-grid"></div>
+        </div>
+
+        <!-- ===== DIET PLANS TAB ===== -->
+        <div class="wellness-panel hidden" id="panel-diet">
+            <div class="wellness-grid" id="diet-grid"></div>
+        </div>
+
+        <!-- ===== HEALTH CONDITIONS TAB ===== -->
+        <div class="wellness-panel hidden" id="panel-health">
+            <div class="wellness-grid" id="health-grid"></div>
+        </div>
+
+        <!-- ===== BMI CALCULATOR TAB ===== -->
+        <div class="wellness-panel hidden" id="panel-bmi">
+            <div class="calculator-grid">
+                <!-- Input Card -->
+                <div class="calc-card">
+                    <h3 class="calc-title">📏 Body Metrics</h3>
+
+                    <div class="calc-form-group">
+                        <div class="calc-label-row">
+                            <span>Height</span>
+                            <span class="calc-val-display" id="height-display">170 cm</span>
+                        </div>
+                        <input type="range" class="calc-slider" id="height-slider" min="120" max="220" value="170">
+                    </div>
+
+                    <div class="calc-form-group">
+                        <div class="calc-label-row">
+                            <span>Weight</span>
+                            <span class="calc-val-display" id="weight-display">70 kg</span>
+                        </div>
+                        <input type="range" class="calc-slider" id="weight-slider" min="30" max="200" value="70">
+                    </div>
+
+                    <div class="calc-form-group">
+                        <div class="calc-label-row">
+                            <span>Age</span>
+                            <span class="calc-val-display" id="age-display">25 years</span>
+                        </div>
+                        <input type="range" class="calc-slider" id="age-slider" min="14" max="80" value="25">
+                    </div>
+
+                    <div class="calc-form-group">
+                        <div class="calc-label-row">
+                            <span>Gender</span>
+                        </div>
+                        <div class="toggle-group">
+                            <button class="toggle-btn active" data-gender="male">♂ Male</button>
+                            <button class="toggle-btn" data-gender="female">♀ Female</button>
+                        </div>
+                    </div>
+
+                    <div class="calc-form-group">
+                        <div class="calc-label-row">
+                            <span>Activity Level</span>
+                        </div>
+                        <select class="activity-select" id="activity-select">
+                            <option value="1.2">Sedentary (little or no exercise)</option>
+                            <option value="1.375">Lightly Active (1-3 days/week)</option>
+                            <option value="1.55" selected>Moderately Active (3-5 days/week)</option>
+                            <option value="1.725">Very Active (6-7 days/week)</option>
+                            <option value="1.9">Extra Active (athlete / physical job)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Results Card -->
+                <div class="calc-card">
+                    <h3 class="calc-title">📊 Your Results</h3>
+
+                    <div class="bmi-result-gauge">
+                        <div class="gauge-wrap">
+                            <div class="gauge-semi">
+                                <div class="gauge-fill" id="gauge-fill"></div>
+                                <div class="gauge-needle" id="gauge-needle"></div>
+                                <div class="gauge-center"></div>
+                            </div>
+                        </div>
+
+                        <div class="bmi-num" id="bmi-value">24.2</div>
+                        <div class="bmi-category" id="bmi-category" style="color: var(--accent-emerald);">Normal Weight</div>
+                    </div>
+
+                    <div class="calorie-breakdown" id="calorie-breakdown">
+                        <div class="calorie-row">
+                            <span>Basal Metabolic Rate (BMR)</span>
+                            <span class="calorie-val" id="bmr-val">1,650</span>
+                        </div>
+                        <div class="calorie-row">
+                            <span>Maintenance Calories (TDEE)</span>
+                            <span class="calorie-val" id="tdee-val">2,558</span>
+                        </div>
+                        <div class="calorie-row">
+                            <span>Weight Loss (~0.5 kg/week)</span>
+                            <span class="calorie-val" id="cut-val">2,058</span>
+                        </div>
+                        <div class="calorie-row">
+                            <span>Weight Gain (~0.5 kg/week)</span>
+                            <span class="calorie-val" id="bulk-val">3,058</span>
+                        </div>
+                    </div>
+
+                    <div class="recommendation-alert" id="bmi-recommendation">
+                        Your BMI is in the <strong>healthy range</strong>. Check our <a href="#" onclick="switchTab('diet')">diet plans</a> to maintain your ideal weight!
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================= -->
+    <!-- WELLNESS DETAIL MODAL                     -->
+    <!-- ========================================= -->
+    <div id="wellness-modal" class="hidden">
+        <div class="modal-overlay" id="wellness-modal-overlay"></div>
+        <div class="modal-wrapper">
+            <div class="modal-card" id="wellness-modal-content">
+                <!-- Dynamically filled by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================= -->
+    <!-- FOOTER                                    -->
+    <!-- ========================================= -->
+    <footer class="site-footer">
+        <div class="footer-content">
+            <div>
+                <div class="footer-brand">
+                    <span style="font-size:1.25rem;">🍳</span>
+                    <span class="footer-brand-text">SmartRecipe</span>
+                </div>
+                <p class="footer-desc">Your intelligent companion for healthy cooking, smart meal planning, and wellness-focused nutrition.</p>
+            </div>
+            <div>
+                <h4 class="footer-heading">Quick Links</h4>
+                <ul class="footer-links">
+                    <li><a href="/">Recipe Search</a></li>
+                    <li><a href="{{ url_for('wellness_page') }}">Health & Wellness</a></li>
+                    <li><a href="{{ url_for('login') }}">Login / Sign Up</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="footer-heading">Health Tools</h4>
+                <ul class="footer-links">
+                    <li><a href="{{ url_for('wellness_page') }}">Gym Plans</a></li>
+                    <li><a href="{{ url_for('wellness_page') }}">Diet Plans</a></li>
+                    <li><a href="{{ url_for('wellness_page') }}">Health Conditions</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="footer-heading">About</h4>
+                <ul class="footer-links">
+                    <li><a href="#">BCA Final Year Project</a></li>
+                    <li><a href="#">Built with Flask & MySQL</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            &copy; 2026 SmartRecipe — BCA Final Year Project. Built with Flask &amp; MySQL.
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/wellness.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+</body>
+</html>
